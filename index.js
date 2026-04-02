@@ -41,23 +41,22 @@ app.get('/', async (req, res) => {
     .qrbox{background:#fff;border-radius:15px;padding:15px;display:inline-block;margin:20px 0}
     .qrbox img{width:230px;height:230px}
     .info{color:rgba(255,255,255,.6);font-size:.9em;margin:8px 0}
-    button{background:linear-gradient(135deg,#6a00cc,#aa33ff);color:#fff;border:none;padding:13px 32px;border-radius:25px;cursor:pointer;font-size:1em;margin-top:15px;letter-spacing:1px}
+    button{background:linear-gradient(135deg,#6a00cc,#aa33ff);color:#fff;border:none;padding:13px 32px;border-radius:25px;cursor:pointer;font-size:1em;margin-top:15px}
     .footer{margin-top:22px;color:rgba(255,255,255,.25);font-size:.78em;letter-spacing:2px}
   </style>
 </head>
 <body>
 <div class="box">
   <div style="font-size:2.8em">⚔️</div>
-  <h1>𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗</h1>
+  <h1>RAGNAR-HEX</h1>
   <p class="info">Bot WhatsApp par <strong>Ibrahima Sory Sacko</strong></p>
   <div class="badge">● Statut : ${botStatus}</div><br/>
   ${currentQR && botStatus !== 'connecté'
     ? `<div class="qrbox"><img src="${qrImage}" alt="QR"/></div>
-       <p class="info">📱 <strong>WhatsApp → Appareils liés → Lier un appareil</strong></p>
-       <p class="info">Scanne ce QR Code</p>`
+       <p class="info">📱 <strong>WhatsApp → Appareils liés → Lier un appareil</strong></p>`
     : botStatus === 'connecté'
-    ? `<p class="info" style="color:#00c864;font-size:1.2em;margin:30px 0">✅ Bot connecté et actif !<br/><br/>Préfixe : <strong style="color:#aa33ff;font-size:1.5em">.</strong></p>`
-    : `<p class="info" style="margin:30px 0">⏳ Chargement du QR Code...<br/>La page se rafraîchit toutes les 15 secondes</p>`
+    ? `<p class="info" style="color:#00c864;font-size:1.2em;margin:30px 0">✅ Bot connecté !<br/><br/>Préfixe : <strong style="color:#aa33ff;font-size:1.5em">.</strong></p>`
+    : `<p class="info" style="margin:30px 0">⏳ Chargement du QR Code...</p>`
   }
   <button onclick="location.reload()">🔄 Rafraîchir</button>
   <div class="footer">⚔️ RAGNAR-HEX ⚔️</div>
@@ -91,44 +90,32 @@ async function startBot() {
     if (qr) {
       currentQR = qr;
       botStatus = 'en attente du scan';
-      console.log('⚔️ [RAGNAR-HEX] QR prêt !');
+      console.log('⚔️ QR prêt !');
     }
-
     if (connection === 'close') {
       currentQR = null;
       botStatus = 'déconnecté';
       const code = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const reconnect = code !== DisconnectReason.loggedOut;
       console.log('❌ Connexion fermée. Code:', code);
-      if (reconnect) {
-        console.log('🔄 Reconnexion dans 5s...');
-        setTimeout(startBot, 5000);
-      } else {
-        console.log('🚫 Déconnecté. Supprime auth_info/ et relance.');
-      }
+      if (reconnect) setTimeout(startBot, 5000);
     }
-
     if (connection === 'open') {
       currentQR = null;
       botStatus = 'connecté';
-      console.log('✅ [RAGNAR-HEX] CONNECTÉ !');
-
-      // Notifier le propriétaire que le bot est en ligne
-      const ownerJid = '224621963059@s.whatsapp.net';
+      console.log('✅ RAGNAR-HEX CONNECTÉ !');
       try {
-        await new Promise(r => setTimeout(r, 3000)); // attendre 3s pour stabiliser
-        await sock.sendMessage(ownerJid, {
+        await new Promise(r => setTimeout(r, 3000));
+        await sock.sendMessage('224621963059@s.whatsapp.net', {
           image: { url: 'https://i.ibb.co/5Xjhk7xV/IMG-20260401-WA1023.jpg' },
           caption: `⚔️ *RAGNAR-HEX EST EN LIGNE* ⚔️\n\n✅ Bot connecté avec succès !\n📌 Préfixe : *.*\n⏰ ${new Date().toLocaleString('fr-FR')}\n\n_Tape *.menu* pour voir les commandes_ 🥷`,
         });
-        console.log('📱 Notification envoyée au propriétaire.');
       } catch (e) {
-        console.log('⚠️ Notification non envoyée:', e.message);
+        console.log('⚠️ Notification:', e.message);
       }
     }
   });
 
-  // ─── Sauvegarde credentials ──────────────────────────────────────────────
   sock.ev.on('creds.update', saveCreds);
 
   // ─── Messages entrants ───────────────────────────────────────────────────
@@ -137,30 +124,21 @@ async function startBot() {
 
     for (const msg of messages) {
       if (!msg.message) continue;
+      // Ignorer seulement les statuts et les messages envoyés PAR le bot (pas par le propriétaire)
+      if (msg.key.remoteJid === 'status@broadcast') continue;
+      // Si fromMe=true ET que c'est PAS le DM du propriétaire à lui-même → ignorer
+      if (msg.key.fromMe && msg.key.remoteJid !== '224621963059@s.whatsapp.net') continue;
 
-      // ── CORRECTION : accepter les messages du propriétaire depuis son propre DM ──
-      // Quand tu t'envoies un message à toi-même, fromMe=true → on l'accepte quand même
-      // On bloque seulement les messages envoyés par le BOT lui-même (status broadcast etc.)
-      const ownerJid = '224621963059@s.whatsapp.net';
-      const isOwnerSelfChat = msg.key.remoteJid === ownerJid && msg.key.fromMe;
-      const isBotBroadcast = msg.key.remoteJid === 'status@broadcast';
-
-      // Ignorer uniquement : les broadcasts de statut et les messages du bot dans les groupes
-      if (isBotBroadcast) continue;
-      if (msg.key.fromMe && !isOwnerSelfChat) continue;
-
-      // Extraire le texte du message
+      // Extraire le texte
       const body =
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
         msg.message?.imageMessage?.caption ||
-        msg.message?.videoMessage?.caption ||
-        msg.message?.buttonsResponseMessage?.selectedButtonId ||
-        msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+        msg.message?.videoMessage?.caption || '';
 
       if (body) console.log(`📩 [${msg.key.remoteJid}] → "${body}"`);
 
-      // ── Vues uniques : intercepter et envoyer dans le DM du bot ──────────
+      // ── Vues uniques ──────────────────────────────────────────────────────
       const msgType = getContentType(msg.message);
       if (
         msgType === 'viewOnceMessage' ||
@@ -172,15 +150,12 @@ async function startBot() {
             msg.message.viewOnceMessage ||
             msg.message.viewOnceMessageV2 ||
             msg.message.viewOnceMessageV2Extension;
-          const inner = vMsg?.message;
-          // Envoie dans le privé du propriétaire
-          const ownerJid = '224621963059@s.whatsapp.net';
-          await sock.sendMessage(ownerJid, {
-            forward: { ...msg, message: inner },
+          await sock.sendMessage('224621963059@s.whatsapp.net', {
+            forward: { ...msg, message: vMsg?.message },
           });
-          console.log('🥷 Vue unique interceptée → envoyée au propriétaire');
+          console.log('🥷 Vue unique interceptée');
         } catch (e) {
-          console.log('⚠️ Erreur vue unique:', e.message);
+          console.log('⚠️ Vue unique:', e.message);
         }
       }
 
@@ -188,7 +163,7 @@ async function startBot() {
       try {
         await handleCommands(sock, msg);
       } catch (err) {
-        console.error('❌ Erreur dans handleCommands:', err.message);
+        console.error('❌ Erreur commande:', err.message);
       }
     }
   });
@@ -197,11 +172,5 @@ async function startBot() {
 }
 
 // ─── Lancement ────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`🌐 Serveur web lancé → port ${PORT}`);
-});
-
-startBot().catch((err) => {
-  console.error('❌ Erreur fatale:', err);
-  process.exit(1);
-});
+app.listen(PORT, () => console.log(`🌐 Serveur web → port ${PORT}`));
+startBot().catch(err => { console.error('❌ Erreur fatale:', err); process.exit(1); });
