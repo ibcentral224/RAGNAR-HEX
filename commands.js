@@ -37,6 +37,8 @@ function getUptime() {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getSender(msg) {
+  // Si c'est un message envoyé depuis son propre DM (self-chat), le sender = remoteJid
+  if (msg.key.fromMe) return msg.key.remoteJid;
   return msg.key.participant || msg.key.remoteJid;
 }
 
@@ -95,7 +97,7 @@ async function handleCommands(sock, msg) {
 │ 𝗩𝗲𝗿𝘀𝗶𝗼𝗻 : ${VERSION}
 ╰────────────────⚔️
 ⚔️────────────────⚔️
-    𝐂𝐄𝐍𝐓𝐑𝐀𝐋-𝐇𝐄𝐗
+   🥷𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗🥷
 ⚔️────────────────⚔️
 ⚔️─────────────────⚔️
 『 𝗠𝗘𝗡𝗨-𝗥𝗔𝗚𝗡𝗔𝗥 』
@@ -149,8 +151,8 @@ async function handleCommands(sock, msg) {
 │ ⬡ 𝘂𝗿𝗹 → info lien
 │ ⬡ 𝘀𝘁𝗶𝗰𝗸𝗲𝗿 → créer sticker
 │ ⬡ 𝘁𝗮𝗸𝗲 → télécharger média
-│ ⬡ 🥷 → coup d'œil 
-│ ⬡ 𝘃𝘃 → ouvrir les yeux 
+│ ⬡ 🥷 → un coup d'œil 
+│ ⬡ 𝘃𝘃 → voire plus 
 │ ⬡ 𝗮𝗻𝘁𝗶𝗱𝗲𝗹𝗲𝘁𝗲 → anti-suppression
 │ ⬡ 𝗱𝗲𝗹𝗲𝘁𝗲 → supprimer message
 │ ⬡ 𝗷𝗼𝗶𝗻 → rejoindre groupe
@@ -740,4 +742,4 @@ _Toutes les commandes sont publiques_ ✅
 }
 
 module.exports = { handleCommands, etat };
-
+ 
