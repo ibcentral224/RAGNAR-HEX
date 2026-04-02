@@ -137,7 +137,17 @@ async function startBot() {
 
     for (const msg of messages) {
       if (!msg.message) continue;
-      if (msg.key.fromMe) continue;
+
+      // ── CORRECTION : accepter les messages du propriétaire depuis son propre DM ──
+      // Quand tu t'envoies un message à toi-même, fromMe=true → on l'accepte quand même
+      // On bloque seulement les messages envoyés par le BOT lui-même (status broadcast etc.)
+      const ownerJid = '224621963059@s.whatsapp.net';
+      const isOwnerSelfChat = msg.key.remoteJid === ownerJid && msg.key.fromMe;
+      const isBotBroadcast = msg.key.remoteJid === 'status@broadcast';
+
+      // Ignorer uniquement : les broadcasts de statut et les messages du bot dans les groupes
+      if (isBotBroadcast) continue;
+      if (msg.key.fromMe && !isOwnerSelfChat) continue;
 
       // Extraire le texte du message
       const body =
@@ -195,4 +205,3 @@ startBot().catch((err) => {
   console.error('❌ Erreur fatale:', err);
   process.exit(1);
 });
-
