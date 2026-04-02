@@ -1,0 +1,23 @@
+{
+  "name": "ragnar-hex",
+  "version": "1.0.0",
+  "description": "Bot WhatsApp RAGNAR-HEX par Ibrahima Sory Sacko",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "@hapi/boom": "^10.0.1",
+    "axios": "^1.6.0",
+    "express": "^4.18.2",
+    "pino": "^8.17.0",
+    "qrcode": "^1.5.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Ibrahima Sory Sacko",
+  "license": "MIT"
+}
+
