@@ -1,11 +1,11 @@
 <div align="center">
 
 <!-- Animated Banner -->
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1a0028,50:6a00cc,100:000000&height=200&section=header&text=RAGNAR-HEX&fontSize=60&fontColor=ffffff&fontAlignY=38&desc=⚔️%20Bot%20WhatsApp%20Légendaire%20⚔️&descAlignY=60&descSize=18&animation=fadeIn" width="700%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1a0028,50:6a00cc,100:000000&height=200&section=header&text=RAGNAR-HEX&fontSize=60&fontColor=ffffff&fontAlignY=38&desc=⚔️%20Bot%20WhatsApp%20Légendaire%20⚔️&descAlignY=60&descSize=18&animation=fadeIn" width="300%"/>
 
 <!-- Bot Image -->
 <br/>
-<img src="https://i.ibb.co/5Xjhk7xV/IMG-20260401-WA1023.jpg" width="180" style="border-radius:50%;border:4px solid #6a00cc;" alt="RAGNAR-HEX"/>
+<img src="https://i.ibb.co/5Xjhk7xV/IMG-20260401-WA1023.jpg" width="700" style="border-radius:50%;border:4px solid #6a00cc;" alt="RAGNAR-HEX"/>
 <br/>
 
 <!-- Animated Title -->
@@ -33,18 +33,18 @@
 <div align="center">
 
 ```
-╔══════════════════════════════════════════════════════╗
+╔══════════════════════════════════════════════╗
 ║                                                      ║
-║    ⚔️  𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗  ⚔️                            ║
+║               ⚔️  𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗  ⚔️                   ║
 ║                                                      ║
 ║   Bot  :  RAGNAR-HEX                                 ║
 ║   Préfixe  :  . (point)                              ║
 ║   Version  :  1.0                                    ║
-║   Langue   :  Français 🇫🇷                           ║
+║   Langue   :  Français 🇫🇷                            ║
 ║   Propriétaire  :  Ibrahima Sory Sacko               ║
 ║   Développeur   :  Ibrahim Sory Sacko                ║
 ║                                                      ║
-╚══════════════════════════════════════════════════════╝
+╚══════════════════════════════════════════════╝
 ```
 
 </div>
