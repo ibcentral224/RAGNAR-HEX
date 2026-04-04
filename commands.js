@@ -9,8 +9,9 @@ const fs = require('fs');
 // ─── Configuration ────────────────────────────────────────────────────────────
 const PREFIXE = '.';
 const NOM_BOT = '𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗';
-const PROPRIETAIRE_NUM = '224621963059';
-const PROPRIETAIRE_JID = '224621963059@s.whatsapp.net';
+const PROPRIETAIRE_NUM = '224613726037';
+const PROPRIETAIRE_JID = '224613726037@s.whatsapp.net';
+const PROPRIETAIRE_NOM = '꧁༒ 𝐑𝐀𝐆𝐍𝐀𝐑 𝐋𝐎𝐓𝐇𝐁𝐑𝐎𝐊 ༒꧂';
 const DEVELOPPEUR = 'Ibrahim Sory Sacko';
 const IMAGE_MENU = 'https://i.ibb.co/5Xjhk7xV/IMG-20260401-WA1023.jpg';
 const VERSION = '1.0';
@@ -37,8 +38,7 @@ function getUptime() {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getSender(msg) {
-  // Si c'est un message envoyé depuis son propre DM (self-chat), le sender = remoteJid
-  if (msg.key.fromMe) return msg.key.remoteJid;
+  if (msg.key.fromMe) return PROPRIETAIRE_JID;
   return msg.key.participant || msg.key.remoteJid;
 }
 
@@ -47,16 +47,43 @@ function isGroupe(msg) {
 }
 
 async function reply(sock, msg, text) {
-  await sock.sendMessage(msg.key.remoteJid, { text }, { quoted: msg });
+  try {
+    await sock.sendMessage(msg.key.remoteJid, { text }, { quoted: msg });
+  } catch (e) {
+    console.error('Erreur reply:', e.message);
+  }
 }
 
-async function isAdmin(sock, groupId, jid) {
+// ─── Télécharger média du message cité ───────────────────────────────────────
+async function getQuotedMedia(sock, msg) {
+  // Cherche le message cité
+  const ctx = msg.message?.extendedTextMessage?.contextInfo;
+  const quotedMsg = ctx?.quotedMessage;
+  if (!quotedMsg) return null;
+
+  // Reconstruire un faux message pour downloadMediaMessage
+  const fakeMsg = {
+    key: {
+      remoteJid: msg.key.remoteJid,
+      id: ctx.stanzaId,
+      participant: ctx.participant,
+    },
+    message: quotedMsg,
+  };
+
+  const type = getContentType(quotedMsg);
+  if (!type) return null;
+
   try {
-    const meta = await sock.groupMetadata(groupId);
-    return meta.participants.some(
-      p => p.id === jid && (p.admin === 'admin' || p.admin === 'superadmin')
-    );
-  } catch { return false; }
+    const buffer = await downloadMediaMessage(fakeMsg, 'buffer', {}, {
+      logger: { info: () => {}, error: () => {}, warn: () => {} },
+      reuploadRequest: sock.updateMediaMessage,
+    });
+    return { buffer, type };
+  } catch (e) {
+    console.error('Erreur téléchargement média:', e.message);
+    return null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -64,40 +91,48 @@ async function isAdmin(sock, groupId, jid) {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleCommands(sock, msg) {
 
-  // ── Extraire le corps du message ───────────────────────────────────────────
+  // Extraire le texte du message
   const body =
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    msg.message?.imageMessage?.caption ||
+    msg.message?.videoMessage?.caption ||
+    msg.message?.stickerMessage ? '' : '' || '';
+
+  const rawBody =
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
     msg.message?.imageMessage?.caption ||
     msg.message?.videoMessage?.caption || '';
 
-  // ── Vérifier le préfixe ────────────────────────────────────────────────────
-  if (!body.startsWith(PREFIXE)) return;
+  // Vérifier le préfixe
+  if (!rawBody.startsWith(PREFIXE)) return;
 
-  const args = body.slice(PREFIXE.length).trim().split(/\s+/);
+  const args = rawBody.slice(PREFIXE.length).trim().split(/\s+/);
   const cmd = args.shift().toLowerCase();
   const texte = args.join(' ');
   const from = msg.key.remoteJid;
   const sender = getSender(msg);
   const groupe = isGroupe(msg);
 
-  console.log(`⚡ Commande reçue: "${cmd}" | texte: "${texte}" | depuis: ${from}`);
+  console.log(`⚡ CMD: "${cmd}" | texte: "${texte}" | from: ${from} | sender: ${sender}`);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 📋 MENU
   // ═══════════════════════════════════════════════════════════════════════════
   if (cmd === 'menu') {
-    const texteMenu = `╭──𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗──────⚔️
+    const texteMenu =
+`╭──𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗──────⚔️
 │ 𝗕𝗼𝘁 : ${NOM_BOT}
 │ 𝗨𝗽𝘁𝗶𝗺𝗲 : ${getUptime()}
 │ 𝗠𝗼𝗱𝗲 : Privé & Groupes
 │ 𝗣𝗿𝗲𝗳𝗶𝘅𝗲 : .
-│ 𝗣𝗿𝗼𝗽𝗿𝗶𝗲́𝘁𝗮𝗶𝗿𝗲 : Ibrahima Sory Sacko
-│ 𝗗𝗲́𝘃𝗲𝗹𝗼𝗽𝗽𝗲𝘂𝗿 : Ibrahim Sory Sacko
+│ 𝗣𝗿𝗼𝗽𝗿𝗶𝗲́𝘁𝗮𝗶𝗿𝗲 : ${PROPRIETAIRE_NOM}
+│ 𝗗𝗲́𝘃𝗲𝗹𝗼𝗽𝗽𝗲𝘂𝗿 : ${DEVELOPPEUR}
 │ 𝗩𝗲𝗿𝘀𝗶𝗼𝗻 : ${VERSION}
 ╰────────────────⚔️
 ⚔️────────────────⚔️
-   🥷𝐑𝐀𝐆𝐍𝐀𝐑-𝐇𝐄𝐗🥷
+    𝐂𝐄𝐍𝐓𝐑𝐀𝐋-𝐇𝐄𝐗
 ⚔️────────────────⚔️
 ⚔️─────────────────⚔️
 『 𝗠𝗘𝗡𝗨-𝗥𝗔𝗚𝗡𝗔𝗥 』
@@ -142,17 +177,16 @@ async function handleCommands(sock, msg) {
 ╰─────────────────⚔️
 ⚔️─────────────────⚔️
 『 𝗢𝗨𝗧𝗜𝗟𝗦-𝗥𝗔𝗚𝗡𝗔𝗥 』
-│ ⬡ 𝗮𝘁𝘁𝗽 → texte en sticker
+│ ⬡ 𝘀𝘁𝗶𝗰𝗸𝗲𝗿 → créer sticker
 │ ⬡ 𝘁𝗼𝗶𝗺𝗮𝗴𝗲 → sticker en image
 │ ⬡ 𝗴𝗶𝗺𝗮𝗴𝗲 → image web
 │ ⬡ 𝗺𝗽𝟯 → convertir en MP3
 │ ⬡ 𝘀𝘀 → capture d'écran
 │ ⬡ 𝗳𝗮𝗻𝗰𝘆 → texte stylé
 │ ⬡ 𝘂𝗿𝗹 → info lien
-│ ⬡ 𝘀𝘁𝗶𝗰𝗸𝗲𝗿 → créer sticker
 │ ⬡ 𝘁𝗮𝗸𝗲 → télécharger média
-│ ⬡ 🥷 → un coup d'œil 
-│ ⬡ 𝘃𝘃 → voire plus 
+│ ⬡ 🥷 → vues uniques → privé
+│ ⬡ 𝘃𝘃 → ouvrir vue unique
 │ ⬡ 𝗮𝗻𝘁𝗶𝗱𝗲𝗹𝗲𝘁𝗲 → anti-suppression
 │ ⬡ 𝗱𝗲𝗹𝗲𝘁𝗲 → supprimer message
 │ ⬡ 𝗷𝗼𝗶𝗻 → rejoindre groupe
@@ -171,14 +205,15 @@ async function handleCommands(sock, msg) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 📋 ALLCMDS
+  // 📝 ALLCMDS
   // ═══════════════════════════════════════════════════════════════════════════
   if (cmd === 'allcmds') {
-    await reply(sock, msg, `⚔️ *TOUTES LES COMMANDES ${NOM_BOT}* ⚔️
+    await reply(sock, msg,
+`⚔️ *TOUTES LES COMMANDES ${NOM_BOT}* ⚔️
 Préfixe : *.*
 
 *── 🤖 GÉNÉRAL ──*
-.menu · .alive · .ping · .dev · .owner · .allvar · .help · .allcmds
+.menu .alive .ping .dev .owner .allvar .help .allcmds
 
 *── 👥 GROUPES ──*
 .tagall · .tagadmin · .getall · .kickall
@@ -196,7 +231,7 @@ Préfixe : *.*
 *── 🔧 OUTILS ──*
 .sticker · .toimage · .fancy [texte]
 .mp3 · .ss [url] · .gimage [texte]
-.url [lien] · .take · .attp [texte]
+.url [lien] · .take
 
 *── 🥷 SPÉCIAL ──*
 .🥷 · .vv · .delete · .join [lien] · .leave
@@ -210,16 +245,17 @@ _Toutes les commandes sont publiques_ ✅
   // ❓ HELP
   // ═══════════════════════════════════════════════════════════════════════════
   if (cmd === 'help') {
-    await reply(sock, msg, `⚔️ *AIDE - ${NOM_BOT}* ⚔️
+    await reply(sock, msg,
+`⚔️ *AIDE - ${NOM_BOT}* ⚔️
 
 *Comment utiliser le bot ?*
 
 1️⃣ Toutes les commandes commencent par un *point (.)*
-   Exemple : *.menu* · *.ping* · *.sticker*
+   Exemples : *.menu* · *.ping* · *.sticker*
 
 2️⃣ Le bot répond en *privé* et dans les *groupes*
 
-3️⃣ Pour *.sticker* → réponds à une image avec la commande
+3️⃣ Pour *.sticker* → envoie une image avec *.sticker* en légende, OU réponds à une image avec *.sticker*
 
 4️⃣ Commandes ON/OFF :
    *.antilink on* ou *.antilink off*
@@ -227,19 +263,8 @@ _Toutes les commandes sont publiques_ ✅
 5️⃣ Pour les sondages :
    *.poll Question|Option1|Option2*
 
-6️⃣ Pour tagger quelqu'un :
-   *.getpp @contact*
-
-*Commandes pour démarrer :*
-• *.menu* → Menu complet avec image
-• *.allcmds* → Liste toutes les commandes
-• *.ping* → Tester si le bot répond
-• *.alive* → Voir si le bot est actif
-
-*Propriétaire :* Ibrahima Sory Sacko
+*Propriétaire :* ${PROPRIETAIRE_NOM}
 *Version :* ${VERSION} | *Préfixe :* .
-
-_Toutes les commandes sont publiques_ ✅
 ⚔️ *RAGNAR-HEX* ⚔️`);
     return;
   }
@@ -254,31 +279,50 @@ _Toutes les commandes sont publiques_ ✅
         caption: `⚔️ *${NOM_BOT} EST ACTIF* ⚔️\n\n✅ Le bot fonctionne parfaitement !\n⏱️ Uptime : ${getUptime()}\n📌 Préfixe : .\n🔖 Version : ${VERSION}\n\n⚔️ *RAGNAR-HEX* ⚔️`,
       }, { quoted: msg });
     } catch {
-      await reply(sock, msg, `⚔️ *${NOM_BOT} EST ACTIF* ⚔️\n\n✅ Parfaitement opérationnel !\n⏱️ Uptime : ${getUptime()}`);
+      await reply(sock, msg, `⚔️ *${NOM_BOT} EST ACTIF* ⚔️\n✅ En ligne depuis : ${getUptime()}`);
     }
     return;
   }
 
   if (cmd === 'ping') {
     const t = Date.now();
-    await sock.sendMessage(from, { text: '🏓 ...' }, { quoted: msg });
-    const latence = Date.now() - t;
-    await reply(sock, msg, `🏓 *PONG !*\n⚡ Latence : *${latence}ms*\n✅ Bot opérationnel\n⚔️ ${NOM_BOT}`);
+    await reply(sock, msg, `🏓 *PONG !*\n⚡ Latence : *${Date.now() - t}ms*\n✅ Bot opérationnel\n⚔️ ${NOM_BOT}`);
     return;
   }
 
   if (cmd === 'dev') {
-    await reply(sock, msg, `👨‍💻 *DÉVELOPPEUR*\n\n⚔️ Nom : ${DEVELOPPEUR}\n📱 WhatsApp : +${PROPRIETAIRE_NUM}\n🤖 Bot : ${NOM_BOT}\n📌 Version : ${VERSION}\n\n_Créé avec ❤️_`);
+    await reply(sock, msg,
+`👨‍💻 *DÉVELOPPEUR*
+
+⚔️ Nom : ${DEVELOPPEUR}
+📱 WhatsApp : +${PROPRIETAIRE_NUM}
+🤖 Bot : ${NOM_BOT}
+📌 Version : ${VERSION}`);
     return;
   }
 
   if (cmd === 'owner') {
-    await reply(sock, msg, `👑 *PROPRIÉTAIRE*\n\n⚔️ Nom : Ibrahima Sory Sacko\n📱 Contact : wa.me/${PROPRIETAIRE_NUM}\n\n_Pour toute question, contacte le propriétaire._`);
+    await reply(sock, msg,
+`👑 *PROPRIÉTAIRE*
+
+⚔️ Nom : ${PROPRIETAIRE_NOM}
+📱 Contact : wa.me/${PROPRIETAIRE_NUM}`);
     return;
   }
 
   if (cmd === 'allvar') {
-    await reply(sock, msg, `📊 *VARIABLES DU BOT*\n\n• Préfixe : ${PREFIXE}\n• Nom : ${NOM_BOT}\n• Version : ${VERSION}\n• Développeur : ${DEVELOPPEUR}\n• Uptime : ${getUptime()}\n• AntiLink : ${etat.antilink ? '✅ ON' : '❌ OFF'}\n• AntiSticker : ${etat.antisticker ? '✅ ON' : '❌ OFF'}\n• AntiGM : ${etat.antigm ? '✅ ON' : '❌ OFF'}\n• AntiDelete : ${etat.antidelete ? '✅ ON' : '❌ OFF'}`);
+    await reply(sock, msg,
+`📊 *VARIABLES DU BOT*
+
+• Préfixe : ${PREFIXE}
+• Nom : ${NOM_BOT}
+• Version : ${VERSION}
+• Propriétaire : ${PROPRIETAIRE_NOM}
+• Uptime : ${getUptime()}
+• AntiLink : ${etat.antilink ? '✅ ON' : '❌ OFF'}
+• AntiSticker : ${etat.antisticker ? '✅ ON' : '❌ OFF'}
+• AntiGM : ${etat.antigm ? '✅ ON' : '❌ OFF'}
+• AntiDelete : ${etat.antidelete ? '✅ ON' : '❌ OFF'}`);
     return;
   }
 
@@ -292,10 +336,12 @@ _Toutes les commandes sont publiques_ ✅
       const membres = meta.participants.map(p => p.id);
       const tags = membres.map(m => `@${m.split('@')[0]}`).join(' ');
       await sock.sendMessage(from, {
-        text: `⚔️ *TAG TOUS LES MEMBRES* ⚔️\n\n${tags}\n\n${texte || ''}`.trim(),
+        text: `⚔️ *TAG TOUS LES MEMBRES* ⚔️\n\n${tags}${texte ? '\n\n' + texte : ''}`,
         mentions: membres,
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -309,7 +355,9 @@ _Toutes les commandes sont publiques_ ✅
         text: `👮 *TAG ADMINS* 👮\n\n${admins.map(m => `@${m.split('@')[0]}`).join(' ')}`,
         mentions: admins,
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -317,9 +365,15 @@ _Toutes les commandes sont publiques_ ✅
     if (!groupe) return reply(sock, msg, '❌ Uniquement dans les groupes.');
     try {
       const meta = await sock.groupMetadata(from);
-      const liste = meta.participants.map((p, i) => `${i + 1}. +${p.id.split('@')[0]}${p.admin ? ' 👮' : ''}`);
-      await reply(sock, msg, `👥 *MEMBRES - ${meta.subject}*\nTotal : ${liste.length}\n\n${liste.join('\n')}`);
-    } catch { await reply(sock, msg, '❌ Erreur.'); }
+      const liste = meta.participants.map((p, i) =>
+        `${i + 1}. +${p.id.split('@')[0]}${p.admin ? ' 👮' : ''}`
+      );
+      await reply(sock, msg,
+        `👥 *MEMBRES - ${meta.subject}*\nTotal : ${liste.length}\n\n${liste.join('\n')}`
+      );
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -328,14 +382,18 @@ _Toutes les commandes sont publiques_ ✅
     try {
       const meta = await sock.groupMetadata(from);
       const botId = sock.user.id.replace(/:\d+/, '') + '@s.whatsapp.net';
-      const aVirer = meta.participants.filter(p => p.id !== botId && p.id !== PROPRIETAIRE_JID).map(p => p.id);
-      await reply(sock, msg, `⚠️ Exclusion de ${aVirer.length} membres en cours...`);
+      const aVirer = meta.participants
+        .filter(p => p.id !== botId && p.id !== PROPRIETAIRE_JID)
+        .map(p => p.id);
+      await reply(sock, msg, `⚠️ Exclusion de ${aVirer.length} membres...`);
       for (const m of aVirer) {
         await sock.groupParticipantsUpdate(from, [m], 'remove').catch(() => {});
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 700));
       }
       await reply(sock, msg, '✅ Tous les membres ont été exclus !');
-    } catch { await reply(sock, msg, '❌ Erreur kickall.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -346,7 +404,9 @@ _Toutes les commandes sont publiques_ ✅
     try {
       await sock.groupParticipantsUpdate(from, [num], 'add');
       await reply(sock, msg, `✅ +${num.split('@')[0]} ajouté !`);
-    } catch { await reply(sock, msg, '❌ Impossible d\'ajouter ce numéro.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Impossible d\'ajouter. Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -355,7 +415,9 @@ _Toutes les commandes sont publiques_ ✅
     try {
       const code = await sock.groupInviteCode(from);
       await reply(sock, msg, `🔗 *Lien du groupe :*\nhttps://chat.whatsapp.com/${code}`);
-    } catch { await reply(sock, msg, '❌ Impossible d\'obtenir le lien.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Impossible d\'obtenir le lien. Le bot doit être admin.');
+    }
     return;
   }
 
@@ -365,21 +427,34 @@ _Toutes les commandes sont publiques_ ✅
       const meta = await sock.groupMetadata(from);
       const admins = meta.participants.filter(p => p.admin).length;
       const date = new Date(meta.creation * 1000).toLocaleDateString('fr-FR');
-      await reply(sock, msg, `📊 *INFOS GROUPE*\n\n📛 Nom : ${meta.subject}\n👥 Membres : ${meta.participants.length}\n👮 Admins : ${admins}\n📅 Créé le : ${date}\n📝 Description : ${meta.desc || 'Aucune'}`);
-    } catch { await reply(sock, msg, '❌ Erreur.'); }
+      await reply(sock, msg,
+`📊 *INFOS GROUPE*
+
+📛 Nom : ${meta.subject}
+👥 Membres : ${meta.participants.length}
+👮 Admins : ${admins}
+📅 Créé le : ${date}
+📝 Description : ${meta.desc || 'Aucune'}`);
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
   if (cmd === 'group') {
     if (!groupe) return reply(sock, msg, '❌ Uniquement dans les groupes.');
-    if (args[0] === 'close') {
-      await sock.groupSettingUpdate(from, 'announcement');
-      await reply(sock, msg, '🔒 Groupe fermé. Seuls les admins peuvent écrire.');
-    } else if (args[0] === 'open') {
-      await sock.groupSettingUpdate(from, 'not_announcement');
-      await reply(sock, msg, '🔓 Groupe ouvert. Tout le monde peut écrire.');
-    } else {
-      await reply(sock, msg, '❌ Usage : .group close | .group open');
+    try {
+      if (texte === 'close') {
+        await sock.groupSettingUpdate(from, 'announcement');
+        await reply(sock, msg, '🔒 Groupe fermé. Seuls les admins peuvent écrire.');
+      } else if (texte === 'open') {
+        await sock.groupSettingUpdate(from, 'not_announcement');
+        await reply(sock, msg, '🔓 Groupe ouvert. Tout le monde peut écrire.');
+      } else {
+        await reply(sock, msg, '❌ Usage : .group close | .group open');
+      }
+    } catch (e) {
+      await reply(sock, msg, '❌ Le bot doit être admin pour cette commande.');
     }
     return;
   }
@@ -388,10 +463,12 @@ _Toutes les commandes sont publiques_ ✅
     if (!groupe) return reply(sock, msg, '❌ Uniquement dans les groupes.');
     try {
       const demandes = await sock.groupRequestParticipantsList(from);
-      if (!demandes.length) return reply(sock, msg, '📭 Aucune demande en attente.');
+      if (!demandes || !demandes.length) return reply(sock, msg, '📭 Aucune demande en attente.');
       await sock.groupRequestParticipantsUpdate(from, demandes.map(d => d.jid), 'approve');
       await reply(sock, msg, `✅ ${demandes.length} demande(s) acceptée(s) !`);
-    } catch { await reply(sock, msg, '❌ Erreur.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -400,7 +477,9 @@ _Toutes les commandes sont publiques_ ✅
     try {
       const g = await sock.groupCreate(texte, [PROPRIETAIRE_JID]);
       await reply(sock, msg, `✅ Groupe *${texte}* créé !\nID : ${g.id}`);
-    } catch { await reply(sock, msg, '❌ Erreur création groupe.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur création : ' + e.message);
+    }
     return;
   }
 
@@ -418,30 +497,37 @@ _Toutes les commandes sont publiques_ ✅
         document: fs.readFileSync(fichier),
         mimetype: 'text/vcard',
         fileName: `membres_${meta.subject}.vcf`,
-        caption: `📋 ${meta.participants.length} contacts exportés`,
+        caption: `📋 ${meta.participants.length} contacts exportés ⚔️`,
       }, { quoted: msg });
       fs.unlinkSync(fichier);
-    } catch { await reply(sock, msg, '❌ Erreur VCF.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur VCF : ' + e.message);
+    }
     return;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 🛡️ ON/OFF
   // ═══════════════════════════════════════════════════════════════════════════
-  for (const sys of ['antilink', 'antisticker', 'antigm', 'antidelete']) {
-    if (cmd === sys) {
-      const noms = { antilink: 'AntiLink', antisticker: 'AntiSticker', antigm: 'AntiGM', antidelete: 'AntiDelete' };
-      if (texte === 'on') {
-        etat[sys] = true;
-        await reply(sock, msg, `✅ ${noms[sys]} activé !`);
-      } else if (texte === 'off') {
-        etat[sys] = false;
-        await reply(sock, msg, `❌ ${noms[sys]} désactivé.`);
-      } else {
-        await reply(sock, msg, `ℹ️ ${noms[sys]} : ${etat[sys] ? '✅ ON' : '❌ OFF'}\nUsage : .${sys} on | .${sys} off`);
-      }
-      return;
+  const systemes = {
+    antilink: 'AntiLink',
+    antisticker: 'AntiSticker',
+    antigm: 'AntiGM',
+    antidelete: 'AntiDelete',
+  };
+
+  if (systemes[cmd]) {
+    const nom = systemes[cmd];
+    if (texte === 'on') {
+      etat[cmd] = true;
+      await reply(sock, msg, `✅ ${nom} activé !`);
+    } else if (texte === 'off') {
+      etat[cmd] = false;
+      await reply(sock, msg, `❌ ${nom} désactivé.`);
+    } else {
+      await reply(sock, msg, `ℹ️ ${nom} : ${etat[cmd] ? '✅ ON' : '❌ OFF'}\nUsage : .${cmd} on | .${cmd} off`);
     }
+    return;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -469,7 +555,9 @@ _Toutes les commandes sont publiques_ ✅
         caption: `📸 Photo de profil de @${cible.split('@')[0]}`,
         mentions: [cible],
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Pas de photo de profil ou profil privé.'); }
+    } catch {
+      await reply(sock, msg, '❌ Pas de photo de profil ou profil privé.');
+    }
     return;
   }
 
@@ -480,9 +568,11 @@ _Toutes les commandes sont publiques_ ✅
       if (pp) {
         await sock.sendMessage(from, { image: { url: pp }, caption: texteP }, { quoted: msg });
       } else {
-        await reply(sock, msg, texteP + '\n_(Pas de photo de profil)_');
+        await reply(sock, msg, texteP + '\n_(Pas de photo)_');
       }
-    } catch { await reply(sock, msg, '❌ Impossible de charger le profil.'); }
+    } catch {
+      await reply(sock, msg, '❌ Impossible de charger le profil.');
+    }
     return;
   }
 
@@ -499,7 +589,9 @@ _Toutes les commandes sont publiques_ ✅
         text: `💑 *COUPLE DU JOUR* 💑\n\n❤️ @${a.id.split('@')[0]}\n🤝 avec\n❤️ @${b.id.split('@')[0]}\n\n_Félicitations !_ ⚔️`,
         mentions: [a.id, b.id],
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -514,7 +606,9 @@ _Toutes les commandes sont publiques_ ✅
         txt += `${emojis[i]} @${m.id.split('@')[0]} — ${Math.floor(Math.random() * 9000) + 1000} pts\n`;
       });
       await sock.sendMessage(from, { text: txt, mentions: top.map(m => m.id) }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -527,30 +621,36 @@ _Toutes les commandes sont publiques_ ✅
       { q: 'Combien de continents y a-t-il ?', r: '7' },
       { q: 'Quel est l\'animal terrestre le plus rapide ?', r: 'Guépard' },
       { q: 'Quelle est la capitale de la France ?', r: 'Paris' },
-      { q: 'Quel est le pays le plus grand du monde ?', r: 'Russie' },
+      { q: 'Quel est le pays le plus peuplé du monde ?', r: 'Inde' },
+      { q: 'Quelle est la monnaie du Japon ?', r: 'Yen' },
+      { q: 'Combien de côtés a un hexagone ?', r: '6' },
     ];
     const q = qs[Math.floor(Math.random() * qs.length)];
-    await reply(sock, msg, `🧠 *QUIZ ${NOM_BOT}*\n\n❓ ${q.q}\n\n_Réponds dans les 30 secondes !_\n\n||✅ Réponse : ${q.r}||`);
+    await reply(sock, msg,
+      `🧠 *QUIZ ${NOM_BOT}*\n\n❓ ${q.q}\n\n_Réponds dans les 30 secondes !_\n\n||✅ Réponse : ${q.r}||`
+    );
     return;
   }
 
   if (cmd === 'anime') {
     try {
-      const endpoints = ['waifu', 'neko', 'shinobu', 'megumin'];
+      const endpoints = ['waifu', 'neko', 'shinobu', 'megumin', 'wave'];
       const ep = endpoints[Math.floor(Math.random() * endpoints.length)];
       const res = await axios.get(`https://api.waifu.pics/sfw/${ep}`, { timeout: 8000 });
       await sock.sendMessage(from, {
         image: { url: res.data.url },
         caption: `🎌 *ANIME* ⚔️ ${NOM_BOT}`,
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Impossible de charger l\'image anime.'); }
+    } catch {
+      await reply(sock, msg, '❌ Impossible de charger l\'image anime. Réessaie !');
+    }
     return;
   }
 
   if (cmd === 'poll') {
     if (!texte) return reply(sock, msg, '❌ Usage : .poll Question|Option1|Option2');
     const parts = texte.split('|');
-    if (parts.length < 3) return reply(sock, msg, '❌ Il faut au moins 2 options.\nUsage : .poll Question|Opt1|Opt2');
+    if (parts.length < 3) return reply(sock, msg, '❌ Il faut au moins 2 options.\nExemple : .poll Qui est le meilleur ?|Ragnar|Bjorn');
     try {
       await sock.sendMessage(from, {
         poll: {
@@ -559,54 +659,97 @@ _Toutes les commandes sont publiques_ ✅
           selectableCount: 1,
         },
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur sondage.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur sondage : ' + e.message);
+    }
     return;
   }
 
   if (cmd === 'emojimix') {
-    await reply(sock, msg, `😄 *EMOJI MIX*\n\n${texte || '😊+🔥'}\nRésultat : ${texte ? texte.replace(/\+/g, '') : '😊🔥'}\n\n⚔️ ${NOM_BOT}`);
+    if (!texte) return reply(sock, msg, '❌ Usage : .emojimix 😊+🔥');
+    await reply(sock, msg, `😄 *EMOJI MIX*\n\nEmojis : ${texte}\nRésultat : ${texte.replace(/\+/g, '')} ⚔️`);
     return;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 🔧 OUTILS
   // ═══════════════════════════════════════════════════════════════════════════
+
   if (cmd === 'sticker') {
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    if (!quoted) return reply(sock, msg, '❌ Réponds à une image avec *.sticker*');
-    const t = getContentType(quoted);
-    if (!['imageMessage', 'videoMessage'].includes(t)) return reply(sock, msg, '❌ Réponds à une image ou vidéo.');
+    // Accepter : image envoyée directement avec .sticker en caption OU réponse à une image
+    let buffer = null;
+    let mediaType = null;
+
+    // Cas 1 : image envoyée directement avec la commande en caption
+    const directType = getContentType(msg.message);
+    if (directType === 'imageMessage' || directType === 'videoMessage') {
+      try {
+        buffer = await downloadMediaMessage(msg, 'buffer', {}, {
+          logger: { info: () => {}, error: () => {}, warn: () => {} },
+          reuploadRequest: sock.updateMediaMessage,
+        });
+        mediaType = directType;
+      } catch (e) {
+        console.error('Erreur dl direct:', e.message);
+      }
+    }
+
+    // Cas 2 : réponse à une image/vidéo
+    if (!buffer) {
+      const media = await getQuotedMedia(sock, msg);
+      if (media && (media.type === 'imageMessage' || media.type === 'videoMessage')) {
+        buffer = media.buffer;
+        mediaType = media.type;
+      }
+    }
+
+    if (!buffer) {
+      return reply(sock, msg, '❌ Envoie une image avec *.sticker* en légende, OU réponds à une image avec *.sticker*');
+    }
+
     try {
-      const buf = await downloadMediaMessage(
-        { message: quoted, key: msg.message.extendedTextMessage.contextInfo },
-        'buffer', {},
-        { logger: { info: () => {}, error: () => {} } }
-      );
-      await sock.sendMessage(from, { sticker: buf }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur sticker. Essaie avec une image simple.'); }
+      await sock.sendMessage(from, { sticker: buffer }, { quoted: msg });
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur sticker : ' + e.message);
+    }
     return;
   }
 
   if (cmd === 'toimage') {
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    if (!quoted?.stickerMessage) return reply(sock, msg, '❌ Réponds à un sticker avec *.toimage*');
+    const media = await getQuotedMedia(sock, msg);
+    if (!media || media.type !== 'stickerMessage') {
+      // Essai direct
+      const directType = getContentType(msg.message);
+      if (directType !== 'stickerMessage') {
+        return reply(sock, msg, '❌ Réponds à un sticker avec *.toimage*');
+      }
+      try {
+        const buf = await downloadMediaMessage(msg, 'buffer', {}, {
+          logger: { info: () => {}, error: () => {}, warn: () => {} },
+          reuploadRequest: sock.updateMediaMessage,
+        });
+        await sock.sendMessage(from, { image: buf, caption: '🖼️ Sticker → Image ⚔️' }, { quoted: msg });
+      } catch (e) {
+        await reply(sock, msg, '❌ Erreur : ' + e.message);
+      }
+      return;
+    }
     try {
-      const buf = await downloadMediaMessage(
-        { message: quoted, key: {} }, 'buffer', {},
-        { logger: { info: () => {}, error: () => {} } }
-      );
-      await sock.sendMessage(from, { image: buf, caption: '🖼️ Sticker → Image ⚔️' }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur conversion.'); }
+      await sock.sendMessage(from, { image: media.buffer, caption: '🖼️ Sticker → Image ⚔️' }, { quoted: msg });
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
   if (cmd === 'fancy') {
     if (!texte) return reply(sock, msg, '❌ Usage : .fancy [texte]');
-    const bold = (t) => [...t].map(c => {
-      const n = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'.indexOf(c);
-      return n === -1 ? c : [...'𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵'][n];
-    }).join('');
-    await reply(sock, msg, `✨ *TEXTE STYLÉ*\n\n${bold(texte)}\n\n${texte.split('').join(' ')}\n\n⚔️ ${NOM_BOT}`);
+    const map = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const bold = [...'𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵'];
+    const toBold = t => [...t].map(c => { const i = map.indexOf(c); return i === -1 ? c : bold[i]; }).join('');
+    await reply(sock, msg,
+      `✨ *TEXTE STYLÉ*\n\n*Gras :* ${toBold(texte)}\n*Espacé :* ${texte.split('').join(' ')}\n*Majuscules :* ${texte.toUpperCase()}\n\n⚔️ ${NOM_BOT}`
+    );
     return;
   }
 
@@ -615,21 +758,25 @@ _Toutes les commandes sont publiques_ ✅
     try {
       await sock.sendMessage(from, {
         image: { url: `https://source.unsplash.com/800x600/?${encodeURIComponent(texte)}` },
-        caption: `🔍 Image : *${texte}* ⚔️`,
+        caption: `🔍 Image pour : *${texte}* ⚔️`,
       }, { quoted: msg });
-    } catch { await reply(sock, msg, `❌ Impossible de trouver une image pour : ${texte}`); }
+    } catch {
+      await reply(sock, msg, `❌ Impossible de trouver une image pour : ${texte}`);
+    }
     return;
   }
 
   if (cmd === 'ss') {
-    if (!texte) return reply(sock, msg, '❌ Usage : .ss [url]');
+    if (!texte) return reply(sock, msg, '❌ Usage : .ss [url du site]');
     try {
       const ssUrl = `https://mini.s-shot.ru/1024x768/JPEG/1024/Z100/?${encodeURIComponent(texte)}`;
       await sock.sendMessage(from, {
         image: { url: ssUrl },
-        caption: `📸 Capture : ${texte}`,
+        caption: `📸 Capture de : ${texte} ⚔️`,
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Capture impossible.'); }
+    } catch {
+      await reply(sock, msg, '❌ Capture impossible. Vérifie l\'URL.');
+    }
     return;
   }
 
@@ -637,40 +784,57 @@ _Toutes les commandes sont publiques_ ✅
     if (!texte) return reply(sock, msg, '❌ Usage : .url [lien]');
     try {
       const domain = new URL(texte).hostname;
-      await reply(sock, msg, `🔗 *INFO LIEN*\n\n📎 URL : ${texte}\n🌐 Domaine : ${domain}`);
-    } catch { await reply(sock, msg, `🔗 Lien : ${texte}`); }
+      await reply(sock, msg, `🔗 *INFO LIEN*\n\n📎 URL : ${texte}\n🌐 Domaine : ${domain}\n⚔️ ${NOM_BOT}`);
+    } catch {
+      await reply(sock, msg, `🔗 Lien reçu : ${texte}`);
+    }
     return;
   }
 
   if (cmd === 'mp3') {
-    await reply(sock, msg, '🎵 *Conversion MP3*\n\nRéponds à une vidéo avec *.mp3*\n⚠️ Fonctionne en local. Sur Render, ffmpeg est limité.');
+    await reply(sock, msg,
+      '🎵 *Conversion MP3*\n\nEnvoie une vidéo avec *.mp3* en légende.\n\n⚠️ Nécessite ffmpeg. Disponible en hébergement local uniquement.'
+    );
     return;
   }
 
   if (cmd === 'take') {
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    if (!quoted) return reply(sock, msg, '❌ Réponds à un média avec *.take*');
+    let buffer = null;
+    let type = null;
+
+    // Essai direct
+    const directType = getContentType(msg.message);
+    if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(directType)) {
+      try {
+        buffer = await downloadMediaMessage(msg, 'buffer', {}, {
+          logger: { info: () => {}, error: () => {}, warn: () => {} },
+          reuploadRequest: sock.updateMediaMessage,
+        });
+        type = directType;
+      } catch {}
+    }
+
+    // Essai via réponse
+    if (!buffer) {
+      const media = await getQuotedMedia(sock, msg);
+      if (media) { buffer = media.buffer; type = media.type; }
+    }
+
+    if (!buffer) return reply(sock, msg, '❌ Envoie un média avec *.take* ou réponds à un média.');
+
+    const exts = { imageMessage: 'jpg', videoMessage: 'mp4', audioMessage: 'mp3', documentMessage: 'bin', stickerMessage: 'webp' };
+    const mimes = { imageMessage: 'image/jpeg', videoMessage: 'video/mp4', audioMessage: 'audio/mp4', documentMessage: 'application/octet-stream', stickerMessage: 'image/webp' };
+
     try {
-      const t = getContentType(quoted);
-      const buf = await downloadMediaMessage(
-        { message: quoted, key: {} }, 'buffer', {},
-        { logger: { info: () => {}, error: () => {} } }
-      );
-      const exts = { imageMessage: 'jpg', videoMessage: 'mp4', audioMessage: 'mp3', documentMessage: 'bin' };
-      const mimes = { imageMessage: 'image/jpeg', videoMessage: 'video/mp4', audioMessage: 'audio/mp4', documentMessage: 'application/octet-stream' };
       await sock.sendMessage(from, {
-        document: buf,
-        mimetype: mimes[t] || 'application/octet-stream',
-        fileName: `ragnar_hex.${exts[t] || 'bin'}`,
+        document: buffer,
+        mimetype: mimes[type] || 'application/octet-stream',
+        fileName: `ragnar_hex_${Date.now()}.${exts[type] || 'bin'}`,
         caption: `📥 Média récupéré ⚔️ ${NOM_BOT}`,
       }, { quoted: msg });
-    } catch { await reply(sock, msg, '❌ Erreur récupération média.'); }
-    return;
-  }
-
-  if (cmd === 'attp') {
-    if (!texte) return reply(sock, msg, '❌ Usage : .attp [texte]');
-    await reply(sock, msg, `🎨 *Texte en Sticker*\n\nTexte : "${texte}"\n\n⚠️ API externe requise. Utilise *.sticker* sur une image avec du texte.`);
+    } catch (e) {
+      await reply(sock, msg, '❌ Erreur : ' + e.message);
+    }
     return;
   }
 
@@ -678,44 +842,57 @@ _Toutes les commandes sont publiques_ ✅
   // 🥷 SPÉCIAL
   // ═══════════════════════════════════════════════════════════════════════════
   if (cmd === '🥷') {
-    await reply(sock, msg, `⚔️ *COMMANDE RAGNAR NINJA* ⚔️\n\n🥷 Cette fonction intercepte automatiquement toutes les *vues uniques* reçues par le bot et les transfère directement dans le *DM du propriétaire*.\n\n✅ Activée en permanence et en arrière-plan !\n\n⚔️ ${NOM_BOT}`);
+    await reply(sock, msg,
+      `⚔️ *COMMANDE NINJA* ⚔️\n\n🥷 Les vues uniques reçues par le bot sont interceptées automatiquement et envoyées dans ton DM.\n\n✅ Activée en permanence !\n⚔️ ${NOM_BOT}`
+    );
     return;
   }
 
   if (cmd === 'vv') {
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    if (!quoted) return reply(sock, msg, '❌ Réponds à une vue unique avec *.vv*');
+    // Chercher le message cité
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    if (!ctx?.quotedMessage) return reply(sock, msg, '❌ Réponds à une vue unique avec *.vv*');
+    const quoted = ctx.quotedMessage;
     const t = getContentType(quoted);
-    if (t === 'viewOnceMessage' || t === 'viewOnceMessageV2') {
-      try {
-        const inner = quoted.viewOnceMessage?.message || quoted.viewOnceMessageV2?.message;
-        await sock.sendMessage(from, { forward: { ...msg, message: inner } }, { quoted: msg });
-      } catch { await reply(sock, msg, '❌ Impossible d\'ouvrir cette vue unique.'); }
-    } else {
-      await reply(sock, msg, '❌ Ce message n\'est pas une vue unique.');
+    const isViewOnce = t === 'viewOnceMessage' || t === 'viewOnceMessageV2' || t === 'viewOnceMessageV2Extension';
+    if (!isViewOnce) return reply(sock, msg, '❌ Ce message n\'est pas une vue unique.');
+    try {
+      const inner = quoted.viewOnceMessage?.message || quoted.viewOnceMessageV2?.message || quoted.viewOnceMessageV2Extension?.message;
+      await sock.sendMessage(from, { forward: { ...msg, message: inner } }, { quoted: msg });
+    } catch (e) {
+      await reply(sock, msg, '❌ Impossible d\'ouvrir : ' + e.message);
     }
     return;
   }
 
   if (cmd === 'delete') {
     const ctx = msg.message?.extendedTextMessage?.contextInfo;
-    if (!ctx) return reply(sock, msg, '❌ Réponds au message à supprimer avec *.delete*');
+    if (!ctx?.stanzaId) return reply(sock, msg, '❌ Réponds au message à supprimer avec *.delete*');
     try {
       await sock.sendMessage(from, {
-        delete: { remoteJid: from, fromMe: false, id: ctx.stanzaId, participant: ctx.participant },
+        delete: {
+          remoteJid: from,
+          fromMe: false,
+          id: ctx.stanzaId,
+          participant: ctx.participant,
+        },
       });
-    } catch { await reply(sock, msg, '❌ Impossible de supprimer.'); }
+    } catch (e) {
+      await reply(sock, msg, '❌ Impossible de supprimer : ' + e.message);
+    }
     return;
   }
 
   if (cmd === 'join') {
     if (!texte) return reply(sock, msg, '❌ Usage : .join [lien du groupe]');
     const match = texte.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/);
-    if (!match) return reply(sock, msg, '❌ Lien invalide.');
+    if (!match) return reply(sock, msg, '❌ Lien invalide.\nExemple : https://chat.whatsapp.com/XXXXXX');
     try {
       await sock.groupAcceptInvite(match[1]);
-      await reply(sock, msg, '✅ Groupe rejoint !');
-    } catch { await reply(sock, msg, '❌ Lien expiré ou invalide.'); }
+      await reply(sock, msg, '✅ Groupe rejoint avec succès !');
+    } catch (e) {
+      await reply(sock, msg, '❌ Lien expiré ou invalide : ' + e.message);
+    }
     return;
   }
 
@@ -725,21 +902,6 @@ _Toutes les commandes sont publiques_ ✅
     setTimeout(() => sock.groupLeave(from).catch(() => {}), 2000);
     return;
   }
-
-  if (cmd === 'antidelete') {
-    const val = texte;
-    if (val === 'on') {
-      etat.antidelete = true;
-      await reply(sock, msg, '✅ AntiDelete activé ! Les messages supprimés seront renvoyés.');
-    } else if (val === 'off') {
-      etat.antidelete = false;
-      await reply(sock, msg, '❌ AntiDelete désactivé.');
-    } else {
-      await reply(sock, msg, `ℹ️ AntiDelete : ${etat.antidelete ? '✅ ON' : '❌ OFF'}\nUsage : .antidelete on | .antidelete off`);
-    }
-    return;
-  }
 }
 
 module.exports = { handleCommands, etat };
- 
