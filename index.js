@@ -16,6 +16,9 @@ const { handleCommands } = require('./commands');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ─── Numéro du propriétaire ───────────────────────────────────────────────────
+const OWNER_JID = '224613726037@s.whatsapp.net';
+
 let currentQR = null;
 let botStatus = 'déconnecté';
 
@@ -49,7 +52,7 @@ app.get('/', async (req, res) => {
 <div class="box">
   <div style="font-size:2.8em">⚔️</div>
   <h1>RAGNAR-HEX</h1>
-  <p class="info">Bot WhatsApp par <strong>Ibrahima Sory Sacko</strong></p>
+  <p class="info">Bot WhatsApp par <strong>꧁༒ RAGNAR LOTHBROK ༒꧂</strong></p>
   <div class="badge">● Statut : ${botStatus}</div><br/>
   ${currentQR && botStatus !== 'connecté'
     ? `<div class="qrbox"><img src="${qrImage}" alt="QR"/></div>
@@ -96,9 +99,8 @@ async function startBot() {
       currentQR = null;
       botStatus = 'déconnecté';
       const code = new Boom(lastDisconnect?.error)?.output?.statusCode;
-      const reconnect = code !== DisconnectReason.loggedOut;
       console.log('❌ Connexion fermée. Code:', code);
-      if (reconnect) setTimeout(startBot, 5000);
+      if (code !== DisconnectReason.loggedOut) setTimeout(startBot, 5000);
     }
     if (connection === 'open') {
       currentQR = null;
@@ -106,10 +108,11 @@ async function startBot() {
       console.log('✅ RAGNAR-HEX CONNECTÉ !');
       try {
         await new Promise(r => setTimeout(r, 3000));
-        await sock.sendMessage('224621963059@s.whatsapp.net', {
+        await sock.sendMessage(OWNER_JID, {
           image: { url: 'https://i.ibb.co/5Xjhk7xV/IMG-20260401-WA1023.jpg' },
           caption: `⚔️ *RAGNAR-HEX EST EN LIGNE* ⚔️\n\n✅ Bot connecté avec succès !\n📌 Préfixe : *.*\n⏰ ${new Date().toLocaleString('fr-FR')}\n\n_Tape *.menu* pour voir les commandes_ 🥷`,
         });
+        console.log('📱 Notification envoyée.');
       } catch (e) {
         console.log('⚠️ Notification:', e.message);
       }
@@ -119,15 +122,32 @@ async function startBot() {
   sock.ev.on('creds.update', saveCreds);
 
   // ─── Messages entrants ───────────────────────────────────────────────────
+  // RÈGLE SIMPLE ET CORRECTE :
+  // ✅ Accepter tous les messages reçus par d'autres personnes (fromMe = false)
+  // ✅ Accepter les messages que le propriétaire s'envoie à lui-même (self-chat)
+  // ❌ Ignorer les statuts WhatsApp
+  // ❌ Ignorer les réponses automatiques du bot lui-même dans les groupes/DM
+
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
 
     for (const msg of messages) {
       if (!msg.message) continue;
-      // Ignorer seulement les statuts et les messages envoyés PAR le bot (pas par le propriétaire)
-      if (msg.key.remoteJid === 'status@broadcast') continue;
-      // Si fromMe=true ET que c'est PAS le DM du propriétaire à lui-même → ignorer
-      if (msg.key.fromMe && msg.key.remoteJid !== '224621963059@s.whatsapp.net') continue;
+
+      const remoteJid = msg.key.remoteJid;
+      const fromMe = msg.key.fromMe;
+
+      // Ignorer les statuts
+      if (remoteJid === 'status@broadcast') continue;
+
+      // Ignorer les messages envoyés par le bot (sauf self-chat du propriétaire)
+      // Le self-chat du propriétaire : remoteJid = numéro du bot/propriétaire ET fromMe = true
+      if (fromMe) {
+        // C'est le propriétaire qui s'envoie un message à lui-même → OK
+        const botNum = sock.user?.id?.replace(/:\d+@/, '@') || '';
+        const isSelfChat = remoteJid === OWNER_JID || remoteJid === botNum;
+        if (!isSelfChat) continue; // Le bot a répondu dans un groupe → on ignore
+      }
 
       // Extraire le texte
       const body =
@@ -136,9 +156,9 @@ async function startBot() {
         msg.message?.imageMessage?.caption ||
         msg.message?.videoMessage?.caption || '';
 
-      if (body) console.log(`📩 [${msg.key.remoteJid}] → "${body}"`);
+      if (body) console.log(`📩 [${remoteJid}] fromMe:${fromMe} → "${body}"`);
 
-      // ── Vues uniques ──────────────────────────────────────────────────────
+      // ── Vues uniques automatiques ─────────────────────────────────────────
       const msgType = getContentType(msg.message);
       if (
         msgType === 'viewOnceMessage' ||
@@ -150,10 +170,10 @@ async function startBot() {
             msg.message.viewOnceMessage ||
             msg.message.viewOnceMessageV2 ||
             msg.message.viewOnceMessageV2Extension;
-          await sock.sendMessage('224621963059@s.whatsapp.net', {
+          await sock.sendMessage(OWNER_JID, {
             forward: { ...msg, message: vMsg?.message },
           });
-          console.log('🥷 Vue unique interceptée');
+          console.log('🥷 Vue unique interceptée → propriétaire');
         } catch (e) {
           console.log('⚠️ Vue unique:', e.message);
         }
