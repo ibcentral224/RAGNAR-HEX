@@ -134,7 +134,7 @@ async function handleCommands(sock, msg) {
 ⚔️────────────────⚔️
     𝐂𝐄𝐍𝐓𝐑𝐀𝐋-𝐇𝐄𝐗
 ⚔️────────────────⚔️
-⚔️─────────────────⚔️
+⚔️────────────────⚔️
 『 𝗠𝗘𝗡𝗨-𝗥𝗔𝗚𝗡𝗔𝗥 』
 │ ⬡ 𝗺𝗲𝗻𝘂 → afficher le menu
 │ ⬡ 𝗮𝗹𝗶𝘃𝗲 → état du bot
@@ -145,7 +145,7 @@ async function handleCommands(sock, msg) {
 │ ⬡ 𝗵𝗲𝗹𝗽 → aide
 │ ⬡ 𝗮𝗹𝗹𝗰𝗺𝗱𝘀 → toutes les commandes
 ╰─────────────────⚔️
-⚔️─────────────────⚔️
+⚔️────────────────⚔️
 『 𝗚𝗥𝗢𝗨𝗣𝗘𝗦-𝗥𝗔𝗚𝗡𝗔𝗥 』
 │ ⬡ 𝗸𝗶𝗰𝗸𝗮𝗹𝗹 → exclure tous
 │ ⬡ 𝘁𝗮𝗴𝗮𝗱𝗺𝗶𝗻 → mention admins
@@ -163,7 +163,7 @@ async function handleCommands(sock, msg) {
 │ ⬡ 𝗰𝗿𝗲𝗮𝘁𝗲 → créer groupe
 │ ⬡ 𝗴𝗿𝗼𝘂𝗽𝗶𝗻𝗳𝗼 → infos groupe
 ╰─────────────────⚔️
-⚔️─────────────────⚔️
+⚔️────────────────⚔️
 『 𝗗𝗜𝗩𝗘𝗥𝗧𝗜𝗦𝗦𝗘𝗠𝗘𝗡𝗧-𝗥𝗔𝗚𝗡𝗔𝗥 』
 │ ⬡ 𝗴𝗲𝘁𝗽𝗽 → photo de profil
 │ ⬡ 𝗴𝗼𝗼𝗱𝗻𝗶𝗴𝗵𝘁 → bonne nuit
@@ -175,7 +175,7 @@ async function handleCommands(sock, msg) {
 │ ⬡ 𝗽𝗼𝗹𝗹 → sondage
 │ ⬡ 𝗲𝗺𝗼𝗷𝗶𝗺𝗶𝘅 → mélange emojis
 ╰─────────────────⚔️
-⚔️─────────────────⚔️
+⚔️────────────────⚔️
 『 𝗢𝗨𝗧𝗜𝗟𝗦-𝗥𝗔𝗚𝗡𝗔𝗥 』
 │ ⬡ 𝘀𝘁𝗶𝗰𝗸𝗲𝗿 → créer sticker
 │ ⬡ 𝘁𝗼𝗶𝗺𝗮𝗴𝗲 → sticker en image
@@ -185,8 +185,8 @@ async function handleCommands(sock, msg) {
 │ ⬡ 𝗳𝗮𝗻𝗰𝘆 → texte stylé
 │ ⬡ 𝘂𝗿𝗹 → info lien
 │ ⬡ 𝘁𝗮𝗸𝗲 → télécharger média
-│ ⬡ 🥷 → vues uniques → privé
-│ ⬡ 𝘃𝘃 → ouvrir vue unique
+│ ⬡ 🥷 → coup d'œil 
+│ ⬡ 𝘃𝘃 → version V
 │ ⬡ 𝗮𝗻𝘁𝗶𝗱𝗲𝗹𝗲𝘁𝗲 → anti-suppression
 │ ⬡ 𝗱𝗲𝗹𝗲𝘁𝗲 → supprimer message
 │ ⬡ 𝗷𝗼𝗶𝗻 → rejoindre groupe
